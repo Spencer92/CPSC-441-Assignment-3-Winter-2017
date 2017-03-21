@@ -12,7 +12,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import udp.segment.Segment;
+import client.Queue.TxQueue;
+
 
 /**
  * FastClient Class
@@ -23,7 +24,7 @@ import udp.segment.Segment;
 public class FastClient {
 	private String server_name;
 	private int server_port;
-	private String file_name;
+	private int window;
 	private int timeout;
 	private static final int SERVER_PORT = 5555;
 	private DataOutputStream outputStream;
@@ -32,6 +33,8 @@ public class FastClient {
 	private DataInputStream inputStream2;
 	private static final int MAX_BYTE_SIZE = 1000;
 	private static final int NO_DATA_RECEIVED = -1;
+	private String file_name = "file100KB";
+	static TxQueue queue;
  	/**
         * Constructor to initialize the program 
         * 
@@ -46,7 +49,7 @@ public class FastClient {
 	/* initialize */	
 		this.server_name = server_name;
 		this.server_port = server_port;
-		this.file_name = file_name;
+		this.window = window;
 		this.timeout = timeout;
 	}
 	
@@ -54,28 +57,45 @@ public class FastClient {
 
 	public void send(String file_name) {
 		Path path = Paths.get(this.file_name);
+		byte [] fileByteInfo = null;
+		Socket socket;
+		byte checkForReceivedInfo;
+		byte [] dataToSend;
+		Segment segment;
+		boolean segmentCheck;
+		DatagramSocket clientSocket;
+		DatagramPacket sendPacket;
+		DatagramPacket receivePacket;
+		InetAddress IPAddress;
+		byte [] ACKCheck;
+		int indexFileInfo;
+		int indexSender;
+		byte[][] dataPackets;
+		byte[] lastDataPacket;
+		int numPackets;
+		int fileLength = fileByteInfo.length;
+		
+		
 		try {
-			byte [] fileByteInfo = Files.readAllBytes(path);
-			Socket socket = new Socket(this.server_name,SERVER_PORT);
-			byte checkForReceivedInfo = 1;
-			byte [] dataToSend = new byte[MAX_BYTE_SIZE];
-			Segment segment = new Segment();
-			boolean segmentCheck = true;
-			DatagramSocket clientSocket = new DatagramSocket();
-			DatagramPacket sendPacket;
-			DatagramPacket receivePacket;
-			InetAddress IPAddress = InetAddress.getByName("localhost");
-			byte [] ACKCheck = new byte[1];
-			int indexFileInfo;
-			int indexSender;
+			fileByteInfo = Files.readAllBytes(path);
+			socket = new Socket(this.server_name,SERVER_PORT);
+			checkForReceivedInfo = 1;
+			dataToSend = new byte[MAX_BYTE_SIZE];
+			segment = new Segment();
+			segmentCheck = true;
+			clientSocket = new DatagramSocket();
+			IPAddress = InetAddress.getByName("localhost");
+			ACKCheck = new byte[1];
+			
 			
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 		}
-
-
-
+		
+		
+		
+		
 	}
 
     /**
