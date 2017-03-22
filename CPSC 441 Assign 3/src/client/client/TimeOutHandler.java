@@ -6,13 +6,13 @@ import java.util.TimerTask;
 import client.Queue.TxQueue;
 import client.Queue.TxQueueNode;
 
-public class TimerThreadWait extends TimerTask
+public class TimeOutHandler extends TimerTask
 {
 	Segment packet = null;
 	long delay = -1;
 	int num = 0;
 	
-	public TimerThreadWait(Segment packet, long delay)
+	public TimeOutHandler(Segment packet, long delay)
 	{
 		this.packet = packet;
 		this.delay = delay;
@@ -25,7 +25,7 @@ public class TimerThreadWait extends TimerTask
 		
 		
 		
-		aTimer.schedule(new TimerThreadWait(this.packet, this.delay), this.delay);
+		aTimer.schedule(new TimeOutHandler(this.packet, this.delay), this.delay);
 		//recieve ack
 		//check if correct ack
 		//if it is, remove head
