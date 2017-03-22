@@ -11,6 +11,7 @@ import java.net.SocketException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Timer;
 
 import client.Queue.TxQueue;
 
@@ -33,7 +34,7 @@ public class FastClient {
 	private DataInputStream inputStream2;
 	private static final int MAX_BYTE_SIZE = 1000;
 	private static final int NO_DATA_RECEIVED = -1;
-	private String file_name = "file100KB";
+	private String file_name;
 	private DatagramSocket clientSocket;
 	private DatagramPacket sendPacket;
 	private DatagramPacket receivePacket;
@@ -49,13 +50,15 @@ public class FastClient {
         * @param window         window size
 	* @param timeout	time out value
         */
-	public FastClient(String server_name, int server_port, int window, int timeout) {
+	public FastClient(String server_name, int server_port, int window, int timeout, 
+			String file_name) {
 	
 	/* initialize */	
 		this.server_name = server_name;
 		this.server_port = server_port;
 		this.window = window;
 		this.timeout = timeout;
+		this.file_name = file_name;
 	}
 	
 	/* send file */
@@ -69,18 +72,19 @@ public class FastClient {
 		Segment segment = null;
 		boolean segmentCheck;
 
-
+		queue = new TxQueue(this.window);
 		byte [] ACKCheck;
 		int indexFileInfo;
 		int indexSender;
 		byte[][] dataPackets;
 		byte[] lastDataPacket;
 		int numPackets;
-		int fileLength = fileByteInfo.length;
+		int fileLength;
 		int seqNum = 0;
 		
 		try {
 			fileByteInfo = Files.readAllBytes(path);
+			fileLength = fileByteInfo.length;
 			socket = new Socket(this.server_name,SERVER_PORT);
 			checkForReceivedInfo = 1;
 			segment = new Segment();
@@ -142,6 +146,8 @@ public class FastClient {
 		DatagramSocket clientSocket = null;
 		DatagramPacket receivePacket = null;
 		byte[] ACKCheck = new byte[1];
+		Timer aTimer = new Timer();
+		
 		try {
 			clientSocket = new DatagramSocket();
 		} catch (SocketException e) {
@@ -149,14 +155,19 @@ public class FastClient {
 			e.printStackTrace();
 		}
 
-		DatagramPacket sendPacket = new DatagramPacket(segment.getBytes(), segment.getLength(),IPAddress, SERVER_PORT);
 		try {
+			queue.add(segment);
+			DatagramPacket sendPacket = new DatagramPacket(segment.getBytes(), segment.getLength(),IPAddress, SERVER_PORT);
 			clientSocket.send(sendPacket);
+			aTimer.schedule(new TimeOutHandler(segment,this.timeout, clientSocket, IPAddress, SERVER_PORT), (long) this.timeout);
+			//			processAck(segment,clientSocket);
 			
-			
-		} catch (IOException e) {
+		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
 		}
 		
 		// add segment to the queue, send segment,
@@ -165,8 +176,20 @@ public class FastClient {
 	}
 	
 	
-	public synchronized void processAck(Segment Ack)
+	public synchronized void processAck(Segment Ack, DatagramSocket clientSocket)
 	{
+		byte[] ACKCheck = new byte[1];
+		ACKCheck[0] = (byte) Ack.getSeqNum();
+		byte ACKChecklength[] = new byte[1];
+		DatagramPacket recievePacket = new DatagramPacket(ACKCheck,ACKCheck.length);
+		try {
+			clientSocket.receive(recievePacket);
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 		// If ack belongs to the current sender window => set the 
 	// state of segment in the transmission queue as 
 	// "acknowledged". Also, until an unacknowledged
@@ -192,7 +215,7 @@ public class FastClient {
      */
 	public static void main(String[] args) {
 		int window = 10; //segments
-		int timeout = 100; // milli-seconds (don't change this value)
+		int timeout = 1000; // milli-seconds (don't change this value)
 		
 		String server = "localhost";
 		String file_name = "";
@@ -211,9 +234,8 @@ public class FastClient {
 			System.out.println("usage: java FastClient server port file windowsize");
 			System.exit(0);
 		}
-
 		
-		FastClient fc = new FastClient(server, server_port, window, timeout);
+		FastClient fc = new FastClient(server, server_port, window, timeout, file_name);
 		
 		System.out.printf("sending file \'%s\' to server...\n", file_name);
 		fc.send(file_name);
