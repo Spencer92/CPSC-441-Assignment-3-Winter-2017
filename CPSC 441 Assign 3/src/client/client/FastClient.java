@@ -14,6 +14,7 @@ import java.nio.file.Paths;
 import java.util.Timer;
 
 import client.Queue.TxQueue;
+import client.Queue.TxQueueNode;
 
 
 /**
@@ -39,6 +40,7 @@ public class FastClient {
 	private DatagramPacket sendPacket;
 	private DatagramPacket receivePacket;
 	private InetAddress IPAddress;
+	private boolean isEnd = false;
 	
 	static TxQueue queue;
  	/**
@@ -140,6 +142,47 @@ public class FastClient {
 		
 	}
 	
+	/* Move processAck processSend, and processTime to FastClient
+	 * Pass FastClient to other functions
+	 * Use AckHandler to get receiveData
+	 * 
+	 * In AckHandler, use receiveData to wait for data for the specified amount of time,
+	 * and tell to resend if nothing found
+	 * 
+	 */
+	
+/*	public synchronized void processAck(Segment Ack)
+	{
+		byte[] ACKCheck = new byte[1];
+		ACKCheck[0] = (byte) Ack.getSeqNum();
+		byte ACKChecklength[] = new byte[1];
+		boolean gotInfo = false;
+		DatagramPacket recievePacket = new DatagramPacket(ACKCheck,ACKCheck.length);
+		try {
+			clientSocket.receive(recievePacket);
+			gotInfo = true;
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		if(gotInfo)
+		{
+			System.out.println("Got info");
+		}
+		else
+		{
+			System.out.println("Did not get info");
+		}
+		// If ack belongs to the current sender window => set the 
+	// state of segment in the transmission queue as 
+	// "acknowledged". Also, until an unacknowledged
+	// segment is found at the head of the transmission 
+	// queue, keep removing segments from the queue
+	// Otherwise => ignore ack
+	}*/
+	
+	
 	public synchronized void processSend(Segment segment, int checkForReceivedInfo)
 	{
 		checkForReceivedInfo = NO_DATA_RECEIVED;
@@ -159,7 +202,10 @@ public class FastClient {
 			queue.add(segment);
 			DatagramPacket sendPacket = new DatagramPacket(segment.getBytes(), segment.getLength(),IPAddress, SERVER_PORT);
 			clientSocket.send(sendPacket);
-			aTimer.schedule(new TimeOutHandler(segment,this.timeout, clientSocket, IPAddress, SERVER_PORT), (long) this.timeout);
+			TimeOutHandler timeOut;
+			aTimer.schedule(timeOut = new TimeOutHandler(segment,this.timeout, clientSocket, IPAddress, SERVER_PORT, this), (long) this.timeout);
+			timeOut.processAck();
+			timeOut.run();
 			//			processAck(segment,clientSocket);
 			
 		} catch (InterruptedException e) {
@@ -176,9 +222,18 @@ public class FastClient {
 	}
 	
 	
-	public synchronized void processAck(Segment Ack, DatagramSocket clientSocket)
+	public synchronized void processAck(Segment Ack)
 	{
-		byte[] ACKCheck = new byte[1];
+		
+		if(queue.getSegment(Ack.getSeqNum()) != null && queue.getNode(Ack.getSeqNum()).getStatus() != TxQueueNode.ACKNOWLEDGED)
+		{
+			queue.getNode(Ack.getSeqNum()).setStatus(TxQueueNode.ACKNOWLEDGED);
+			//Need while from notes
+		}
+		
+		
+		
+		/*		byte[] ACKCheck = new byte[1];
 		ACKCheck[0] = (byte) Ack.getSeqNum();
 		byte ACKChecklength[] = new byte[1];
 		DatagramPacket recievePacket = new DatagramPacket(ACKCheck,ACKCheck.length);
@@ -188,7 +243,7 @@ public class FastClient {
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
+		}*/
 		
 		// If ack belongs to the current sender window => set the 
 	// state of segment in the transmission queue as 
@@ -213,9 +268,17 @@ public class FastClient {
      * A simple test driver
      * 
      */
+	
+	
+	public boolean isEnd()
+	{
+		return isEnd;
+	}
+	
+	
 	public static void main(String[] args) {
 		int window = 10; //segments
-		int timeout = 1000; // milli-seconds (don't change this value)
+		int timeout = 10000; // milli-seconds (don't change this value)
 		
 		String server = "localhost";
 		String file_name = "";

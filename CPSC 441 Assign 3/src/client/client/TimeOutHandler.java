@@ -20,34 +20,46 @@ public class TimeOutHandler extends TimerTask
 	private static int NO_DATA_RECEIVED = -1;
 	private InetAddress IPAddress;
 	private int server_port;
+	FastClient client;
 	
 	public TimeOutHandler(Segment packet, long delay, DatagramSocket clientSocket,
-										InetAddress IPAddress, int server_port)
+										InetAddress IPAddress, int server_port, FastClient client)
 	{
 		this.packet = packet;
 		this.delay = delay;
 		this.clientSocket = clientSocket;
 		this.IPAddress = IPAddress;
 		this.server_port = server_port;
+		this.client = client;
 		System.out.println("Entered TimeOutHandler");
-		processAck(packet,clientSocket);
+		
+//		processAck(packet,clientSocket);
 		
 	}
 	
-	public synchronized void processAck(Segment Ack, DatagramSocket clientSocket)
+	public synchronized void processAck(/*Segment Ack, DatagramSocket clientSocket*/)
 	{
 		byte[] ACKCheck = new byte[1];
-		ACKCheck[0] = (byte) Ack.getSeqNum();
+		ACKCheck[0] = (byte) packet.getSeqNum();
 		byte ACKChecklength[] = new byte[1];
+		boolean gotInfo = false;
 		DatagramPacket recievePacket = new DatagramPacket(ACKCheck,ACKCheck.length);
 		try {
 			clientSocket.receive(recievePacket);
+			gotInfo = true;
 			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+		if(gotInfo)
+		{
+			System.out.println("Got info");
+		}
+		else
+		{
+			System.out.println("Did not get info");
+		}
 		// If ack belongs to the current sender window => set the 
 	// state of segment in the transmission queue as 
 	// "acknowledged". Also, until an unacknowledged
@@ -77,8 +89,11 @@ public class TimeOutHandler extends TimerTask
 			FastClient.queue.add(packet);
 			DatagramPacket sendPacket = new DatagramPacket(packet.getBytes(), packet.getLength(),this.IPAddress, this.server_port);
 			clientSocket.send(sendPacket);
-			aTimer.schedule(new TimeOutHandler(packet,this.delay, clientSocket, this.IPAddress, this.server_port),this.delay);
-			processAck(packet,clientSocket);
+			TimeOutHandler timeOut;
+			aTimer.schedule(timeOut = new TimeOutHandler(packet,this.delay, clientSocket, this.IPAddress, this.server_port, this.client),this.delay);
+			timeOut.processAck();
+			timeOut.run();
+//			processAck(packet,clientSocket);
 			
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
