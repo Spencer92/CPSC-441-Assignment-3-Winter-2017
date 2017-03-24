@@ -42,7 +42,7 @@ public class FastClient {
 	private InetAddress IPAddress;
 	private boolean isEnd = false;
 	private Timer aTimer;
-	private boolean waitForSend = false;
+//	private boolean waitForSend = false;
 	
 	static TxQueue queue;
  	/**
@@ -132,6 +132,7 @@ public class FastClient {
 				{
 					break;
 				}
+				dataToSend = new byte[MAX_BYTE_SIZE];
 				while(indexSender < dataToSend.length && indexFileInfo < fileByteInfo.length && indexSender < MAX_BYTE_SIZE)
 				{
 					dataToSend[indexSender] = fileByteInfo[indexFileInfo];
@@ -149,6 +150,47 @@ public class FastClient {
 				processSend(segment);
 				
 			}
+			
+			dataToSend = new byte[fileByteInfo.length - indexFileInfo];
+			indexSender = 0;
+			while(indexSender < dataToSend.length && indexFileInfo < fileByteInfo.length && indexSender < MAX_BYTE_SIZE)
+			{
+				dataToSend[indexSender] = fileByteInfo[indexFileInfo];
+				indexSender++;
+				indexFileInfo++;
+			}
+			
+			System.out.println("About to process" + seqNum);
+			System.out.println("Entering final");
+			segment = new Segment();
+			segment.setPayload(dataToSend);
+			segment.setSeqNum(seqNum);
+			while(queue.isFull()){}
+			
+			processSend(segment);
+			
+			
+			do
+			{
+			
+				if(queue.isEmpty())
+				{	
+					isEnd = true;
+					try {
+						outputStream.writeByte(0);
+						inputStream.close();
+						outputStream.close();				
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						System.out.println(queue.isEmpty());
+					}
+					
+					aTimer.cancel();
+					clientSocket.close();
+					break;
+				}
+			}while(true);
+			
 			
 		}
 
@@ -249,7 +291,6 @@ public class FastClient {
 			//do nothing
 		}*/
 		
-		waitForSend = true;
 		
 		
 		
@@ -259,7 +300,7 @@ public class FastClient {
 			queue.getNode(Ack.getSeqNum()).setStatus(TxQueueNode.ACKNOWLEDGED);
 			System.out.println("Head of queue is " + queue.getHeadSegment().getSeqNum());
 			System.out.println("Acknowledged Ack " + Ack.getSeqNum());
-			waitForSend = false;
+//			waitForSend = false;
 			
 			while(queue.getHeadNode() != null && queue.getHeadNode().getStatus() == TxQueueNode.ACKNOWLEDGED)
 			{
@@ -276,7 +317,7 @@ public class FastClient {
 		}
 		else
 		{
-			waitForSend = false;
+//			waitForSend = false;
 			System.out.println("Did not remove " + Ack.getSeqNum());
 		}
 	
@@ -290,21 +331,19 @@ public class FastClient {
 	
 	public synchronized void processTime(int seqNum)
 	{
-		DatagramSocket clientSocket;
+//		DatagramSocket clientSocket;
 		DatagramPacket sendPacket;
 		AckHandler handler;
-
-		while(waitForSend){}
 		
-		System.out.println("Wait for send is" + waitForSend);		
+//		System.out.println("Wait for send is" + waitForSend);		
 		
 		if(queue.getNode(seqNum) != null && queue.getNode(seqNum).getStatus() != TxQueueNode.ACKNOWLEDGED)
 		{
 			System.out.println("Failed to send seqNum " + seqNum + ", resending");
 			sendPacket = new DatagramPacket(queue.getSegment(seqNum).getBytes(),queue.getSegment(seqNum).getLength(),this.IPAddress,SERVER_PORT);
 			try {
-				clientSocket = new DatagramSocket();
-				clientSocket.send(sendPacket);
+
+				this.clientSocket.send(sendPacket);
 				TimeOutHandler timeOut;
 //				handler = new AckHandler(this,queue.getSegment(seqNum), clientSocket);
 				aTimer.schedule(timeOut = new TimeOutHandler(queue.getSegment(seqNum),this.timeout, clientSocket, IPAddress, SERVER_PORT, this,seqNum), (long) this.timeout);

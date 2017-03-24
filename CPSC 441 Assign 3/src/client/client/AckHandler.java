@@ -57,8 +57,15 @@ public class AckHandler implements Runnable
 				client.processAck(recieveSeg);
 				
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				if(client.isEnd())
+				{
+					break;
+				}
+				else
+				{
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
 
 		}
