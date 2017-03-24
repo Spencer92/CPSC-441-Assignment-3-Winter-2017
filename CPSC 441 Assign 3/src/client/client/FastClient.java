@@ -28,7 +28,7 @@ public class FastClient {
 	private int server_port;
 	private int window;
 	private int timeout;
-	private static final int SERVER_PORT = 5555;
+	public static final int SERVER_PORT = 5555;
 	private DataOutputStream outputStream;
 	private DataInputStream inputStream;
 	private DataOutputStream outputStream2;
@@ -83,6 +83,8 @@ public class FastClient {
 		int numPackets;
 		int fileLength;
 		int seqNum = 0;
+
+		
 		
 		try {
 			fileByteInfo = Files.readAllBytes(path);
@@ -129,7 +131,7 @@ public class FastClient {
 				indexSender = 0;
 				segment.setPayload(dataToSend);
 				segment.setSeqNum(seqNum++);
-				processSend(segment, checkForReceivedInfo);
+				processSend(segment);
 				
 			}
 			
@@ -183,13 +185,14 @@ public class FastClient {
 	}*/
 	
 	
-	public synchronized void processSend(Segment segment, int checkForReceivedInfo)
+	public synchronized void processSend(Segment segment)
 	{
-		checkForReceivedInfo = NO_DATA_RECEIVED;
+		int checkForReceivedInfo = NO_DATA_RECEIVED;
 		DatagramSocket clientSocket = null;
 		DatagramPacket receivePacket = null;
 		byte[] ACKCheck = new byte[1];
 		Timer aTimer = new Timer();
+		AckHandler handler;
 		
 		try {
 			clientSocket = new DatagramSocket();
@@ -199,13 +202,15 @@ public class FastClient {
 		}
 
 		try {
-			queue.add(segment);
 			DatagramPacket sendPacket = new DatagramPacket(segment.getBytes(), segment.getLength(),IPAddress, SERVER_PORT);
 			clientSocket.send(sendPacket);
+			queue.add(segment);
+			handler = new AckHandler(this,segment, clientSocket);
 			TimeOutHandler timeOut;
-			aTimer.schedule(timeOut = new TimeOutHandler(segment,this.timeout, clientSocket, IPAddress, SERVER_PORT, this), (long) this.timeout);
-			timeOut.processAck();
-			timeOut.run();
+			aTimer.schedule(timeOut = new TimeOutHandler(segment,this.timeout, clientSocket, IPAddress, SERVER_PORT, this,segment.getSeqNum()), (long) this.timeout);
+			startHandler(handler);
+			//			timeOut.processAck();
+//			timeOut.run();
 			//			processAck(segment,clientSocket);
 			
 		} catch (InterruptedException e) {
@@ -221,14 +226,27 @@ public class FastClient {
 		// schedule timertask for the segment
 	}
 	
+	public synchronized void startHandler(AckHandler handler)
+	{
+		handler.run();
+	}
 	
 	public synchronized void processAck(Segment Ack)
 	{
 		
-		if(queue.getSegment(Ack.getSeqNum()) != null && queue.getNode(Ack.getSeqNum()).getStatus() != TxQueueNode.ACKNOWLEDGED)
+		queue.getNode(Ack.getSeqNum()).setStatus(TxQueueNode.ACKNOWLEDGED);
+		System.out.println("Acknowledged Ack " + Ack.getSeqNum());
+		
+		while(queue.getHeadNode() != null && queue.getHeadNode().getStatus() == TxQueueNode.ACKNOWLEDGED)
 		{
-			queue.getNode(Ack.getSeqNum()).setStatus(TxQueueNode.ACKNOWLEDGED);
-			//Need while from notes
+			try {
+				System.out.println("Removed Ack " + queue.getHeadSegment().getSeqNum());
+				queue.remove();
+				
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			};
 		}
 		
 		
@@ -255,6 +273,42 @@ public class FastClient {
 	
 	public synchronized void processTime(int seqNum)
 	{
+		DatagramSocket clientSocket;
+		DatagramPacket sendPacket;
+		Timer aTimer = new Timer();
+		
+		System.out.println("Entered Proccess time for seqNum " + seqNum);
+		
+		
+		
+		
+		if(queue.getNode(seqNum) != null && queue.getNode(seqNum).getStatus() != TxQueueNode.ACKNOWLEDGED)
+		{
+			System.out.println("Failed to send seqNum " + seqNum + ", resending");
+			sendPacket = new DatagramPacket(queue.getSegment(seqNum).getBytes(),queue.getSegment(seqNum).getLength(),this.IPAddress,SERVER_PORT);
+			try {
+				clientSocket = new DatagramSocket();
+				clientSocket.send(sendPacket);
+				TimeOutHandler timeOut;
+				aTimer.schedule(timeOut = new TimeOutHandler(queue.getSegment(seqNum),this.timeout, clientSocket, IPAddress, SERVER_PORT, this,seqNum), (long) this.timeout);
+				
+			} catch (SocketException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			
+//			processSend(queue.getSegment(seqNum));
+		}
+		else
+		{
+			System.out.println("Did not fail to send seqNum " + seqNum);
+		}
+		
+		
 	// Keeping track of timer tasks for each segment may 
 	// be difficult. An easier way is to check whether the 
 	// time-out happened for a segment that belongs
@@ -278,7 +332,7 @@ public class FastClient {
 	
 	public static void main(String[] args) {
 		int window = 10; //segments
-		int timeout = 10000; // milli-seconds (don't change this value)
+		int timeout = 1000; // milli-seconds (don't change this value)
 		
 		String server = "localhost";
 		String file_name = "";

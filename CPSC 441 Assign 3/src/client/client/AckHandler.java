@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.SocketException;
 
 public class AckHandler extends Thread
 {
@@ -13,26 +14,25 @@ public class AckHandler extends Thread
 	
 	FastClient client;
 	private Segment packet;
-	private long delay;
+//	private long delay;
 	private DatagramSocket clientSocket;
-	private InetAddress IPAddress;
-	private int server_port;
+//	private InetAddress IPAddress;
+//	private int server_port;
 	
-	public AckHandler(Segment packet, long delay, DatagramSocket clientSocket,
-			InetAddress IPAddress, int server_port, FastClient client)
+	public AckHandler(FastClient client, Segment packet, DatagramSocket clientSocket)
 	{
-		this.packet = packet;
-		this.delay = delay;
-		this.clientSocket = clientSocket;
-		this.IPAddress = IPAddress;
-		this.server_port = server_port;
+//		this.clientSocket = clientSocket;
 		this.client = client;
+		this.packet = packet;
+		this.clientSocket = clientSocket;
 		System.out.println("Entered TimeOutHandler");
 		
 		//processAck(packet,clientSocket);
 	
 	}
 	
+
+
 	@Override
 	public void run()
 	{
@@ -43,7 +43,9 @@ public class AckHandler extends Thread
 			byte ACKChecklength[] = new byte[1];
 			DatagramPacket recievePacket = new DatagramPacket(ACKCheck,ACKCheck.length);
 			try {
+				System.out.println("Attempting to recieve packet " + packet.getSeqNum());
 				clientSocket.receive(recievePacket);
+				System.out.println("Received packet " + packet.getSeqNum());
 				client.processAck(packet);
 				
 			} catch (IOException e) {

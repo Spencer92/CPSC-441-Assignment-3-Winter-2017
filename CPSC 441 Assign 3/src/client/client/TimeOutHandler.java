@@ -21,9 +21,11 @@ public class TimeOutHandler extends TimerTask
 	private InetAddress IPAddress;
 	private int server_port;
 	FastClient client;
+	private int seqNum;
 	
 	public TimeOutHandler(Segment packet, long delay, DatagramSocket clientSocket,
-										InetAddress IPAddress, int server_port, FastClient client)
+										InetAddress IPAddress, int server_port, FastClient client,
+										int seqNum)
 	{
 		this.packet = packet;
 		this.delay = delay;
@@ -32,6 +34,8 @@ public class TimeOutHandler extends TimerTask
 		this.server_port = server_port;
 		this.client = client;
 		System.out.println("Entered TimeOutHandler");
+		this.seqNum = seqNum;
+		
 		
 //		processAck(packet,clientSocket);
 		
@@ -72,12 +76,55 @@ public class TimeOutHandler extends TimerTask
 	public void run() 
 	{
 		System.out.println("Waited too long, entering run");
-		int checkForReceivedInfo = NO_DATA_RECEIVED;
+/*		int checkForReceivedInfo = NO_DATA_RECEIVED;
 		DatagramSocket clientSocket = null;
 		DatagramPacket receivePacket = null;
 		byte[] ACKCheck = new byte[1];
+		Timer aTimer = new Timer();*/
+	
+//		DatagramSocket clientSocket;
+		DatagramPacket sendPacket;
 		Timer aTimer = new Timer();
 		
+		System.out.println("Entered Proccess time for seqNum " + seqNum);
+		
+		
+//		System.out.println(FastClient.queue.getNode(seqNum).getStatus() == TxQueueNode.ACKNOWLEDGED);
+		
+		if(FastClient.queue.getNode(seqNum) != null && 
+				FastClient.queue.getNode(seqNum).getStatus() != TxQueueNode.ACKNOWLEDGED)
+		{
+			System.out.println("Failed to send seqNum " + seqNum + ", resending");
+			sendPacket = new DatagramPacket(FastClient.queue.getSegment(seqNum).getBytes(),FastClient.queue.getSegment(seqNum).getLength(),this.IPAddress,FastClient.SERVER_PORT);
+			try {
+				clientSocket = new DatagramSocket();
+				clientSocket.send(sendPacket);
+				TimeOutHandler timeOut;
+				AckHandler handler = new AckHandler(client,FastClient.queue.getSegment(seqNum),clientSocket);
+				aTimer.schedule(timeOut = new TimeOutHandler(FastClient.queue.getSegment(seqNum),this.delay, clientSocket, IPAddress, FastClient.SERVER_PORT, client, this.seqNum), (long) this.delay);
+				handler.run();
+				
+			} catch (SocketException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			
+//			processSend(queue.getSegment(seqNum));
+		}
+		else
+		{
+			System.out.println("Did not fail to send seqNum " + seqNum);
+			return;
+		}		
+		
+		
+//		client.processTime(packet.getSeqNum());
+		
+/*		
 		try {
 			clientSocket = new DatagramSocket();
 		} catch (SocketException e) {
@@ -102,7 +149,7 @@ public class TimeOutHandler extends TimerTask
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-		
+		*/
 		
 		//recieve ack
 		//check if correct ack
