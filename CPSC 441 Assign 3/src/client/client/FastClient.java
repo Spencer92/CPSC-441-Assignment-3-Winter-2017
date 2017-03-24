@@ -41,6 +41,8 @@ public class FastClient {
 	private DatagramPacket receivePacket;
 	private InetAddress IPAddress;
 	private boolean isEnd = false;
+	private Timer aTimer;
+	private boolean waitForSend = false;
 	
 	static TxQueue queue;
  	/**
@@ -93,7 +95,13 @@ public class FastClient {
 			checkForReceivedInfo = 1;
 			segment = new Segment();
 			segmentCheck = true;
-			clientSocket = new DatagramSocket();
+			clientSocket = new DatagramSocket(7777);
+			AckHandler handler = new AckHandler(this,null,clientSocket);
+			Thread aThread = new Thread(handler);
+			aThread.start();
+			aTimer = new Timer();
+			
+			
 			IPAddress = InetAddress.getByName("localhost");
 			ACKCheck = new byte[window];
 
@@ -116,6 +124,8 @@ public class FastClient {
 			indexFileInfo = 0;
 			indexSender = 0;
 			
+//			AckHandler handler = new AckHandler()
+			
 			while(indexFileInfo < fileByteInfo.length)
 			{
 				if(fileByteInfo.length - indexFileInfo < 1000)
@@ -129,8 +139,13 @@ public class FastClient {
 					indexFileInfo++;
 				}
 				indexSender = 0;
+				System.out.println("About to process" + seqNum);
+				segment = new Segment();
 				segment.setPayload(dataToSend);
-				segment.setSeqNum(seqNum++);
+				segment.setSeqNum(seqNum);
+				seqNum++;
+				while(queue.isFull()){}
+				
 				processSend(segment);
 				
 			}
@@ -188,27 +203,22 @@ public class FastClient {
 	public synchronized void processSend(Segment segment)
 	{
 		int checkForReceivedInfo = NO_DATA_RECEIVED;
-		DatagramSocket clientSocket = null;
+//		DatagramSocket clientSocket = null;
 		DatagramPacket receivePacket = null;
 		byte[] ACKCheck = new byte[1];
-		Timer aTimer = new Timer();
+
 		AckHandler handler;
-		
-		try {
-			clientSocket = new DatagramSocket();
-		} catch (SocketException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 
 		try {
 			DatagramPacket sendPacket = new DatagramPacket(segment.getBytes(), segment.getLength(),IPAddress, SERVER_PORT);
-			clientSocket.send(sendPacket);
+			this.clientSocket.send(sendPacket);
 			queue.add(segment);
-			handler = new AckHandler(this,segment, clientSocket);
+			System.out.println("Sent out " + segment.getSeqNum());
+//			handler = new AckHandler(this,segment, clientSocket);
+//			Thread aThread = new Thread(handler);
 			TimeOutHandler timeOut;
 			aTimer.schedule(timeOut = new TimeOutHandler(segment,this.timeout, clientSocket, IPAddress, SERVER_PORT, this,segment.getSeqNum()), (long) this.timeout);
-			startHandler(handler);
+//			aThread.start();
 			//			timeOut.processAck();
 //			timeOut.run();
 			//			processAck(segment,clientSocket);
@@ -225,44 +235,51 @@ public class FastClient {
 		// set the state of segment in the queue as "sent" and 
 		// schedule timertask for the segment
 	}
-	
-	public synchronized void startHandler(AckHandler handler)
-	{
-		handler.run();
-	}
+
 	
 	public synchronized void processAck(Segment Ack)
 	{
-		
-		queue.getNode(Ack.getSeqNum()).setStatus(TxQueueNode.ACKNOWLEDGED);
-		System.out.println("Acknowledged Ack " + Ack.getSeqNum());
-		
-		while(queue.getHeadNode() != null && queue.getHeadNode().getStatus() == TxQueueNode.ACKNOWLEDGED)
+/*		try
 		{
-			try {
-				System.out.println("Removed Ack " + queue.getHeadSegment().getSeqNum());
-				queue.remove();
-				
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			};
+			queue.getNode(Ack.getSeqNum()).setStatus(TxQueueNode.ACKNOWLEDGED);
 		}
-		
-		
-		
-		/*		byte[] ACKCheck = new byte[1];
-		ACKCheck[0] = (byte) Ack.getSeqNum();
-		byte ACKChecklength[] = new byte[1];
-		DatagramPacket recievePacket = new DatagramPacket(ACKCheck,ACKCheck.length);
-		try {
-			clientSocket.receive(recievePacket);
-			
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		catch(NullPointerException e)
+		{
+			System.out.println(Ack.getSeqNum() + " already removed");
+			//do nothing
 		}*/
 		
+		waitForSend = true;
+		
+		
+		
+		if(queue.getNode(Ack.getSeqNum()) != null)
+		{
+		
+			queue.getNode(Ack.getSeqNum()).setStatus(TxQueueNode.ACKNOWLEDGED);
+			System.out.println("Head of queue is " + queue.getHeadSegment().getSeqNum());
+			System.out.println("Acknowledged Ack " + Ack.getSeqNum());
+			waitForSend = false;
+			
+			while(queue.getHeadNode() != null && queue.getHeadNode().getStatus() == TxQueueNode.ACKNOWLEDGED)
+			{
+				try {
+					System.out.println("Removed Ack " + queue.getHeadSegment().getSeqNum());
+					queue.remove();
+					
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				};
+			}
+		
+		}
+		else
+		{
+			waitForSend = false;
+			System.out.println("Did not remove " + Ack.getSeqNum());
+		}
+	
 		// If ack belongs to the current sender window => set the 
 	// state of segment in the transmission queue as 
 	// "acknowledged". Also, until an unacknowledged
@@ -275,12 +292,11 @@ public class FastClient {
 	{
 		DatagramSocket clientSocket;
 		DatagramPacket sendPacket;
-		Timer aTimer = new Timer();
+		AckHandler handler;
+
+		while(waitForSend){}
 		
-		System.out.println("Entered Proccess time for seqNum " + seqNum);
-		
-		
-		
+		System.out.println("Wait for send is" + waitForSend);		
 		
 		if(queue.getNode(seqNum) != null && queue.getNode(seqNum).getStatus() != TxQueueNode.ACKNOWLEDGED)
 		{
@@ -290,7 +306,9 @@ public class FastClient {
 				clientSocket = new DatagramSocket();
 				clientSocket.send(sendPacket);
 				TimeOutHandler timeOut;
+//				handler = new AckHandler(this,queue.getSegment(seqNum), clientSocket);
 				aTimer.schedule(timeOut = new TimeOutHandler(queue.getSegment(seqNum),this.timeout, clientSocket, IPAddress, SERVER_PORT, this,seqNum), (long) this.timeout);
+//				handler.run();
 				
 			} catch (SocketException e) {
 				// TODO Auto-generated catch block
@@ -332,7 +350,7 @@ public class FastClient {
 	
 	public static void main(String[] args) {
 		int window = 10; //segments
-		int timeout = 1000; // milli-seconds (don't change this value)
+		int timeout = 150; // milli-seconds (don't change this value)
 		
 		String server = "localhost";
 		String file_name = "";

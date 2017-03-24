@@ -6,7 +6,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 
-public class AckHandler extends Thread
+public class AckHandler implements Runnable
 {
 	/*
 	 * get Ackhandler stuff
@@ -36,17 +36,25 @@ public class AckHandler extends Thread
 	@Override
 	public void run()
 	{
+		System.out.println("Entered Run for AckHandler");
 		while(!client.isEnd())
 		{
-			byte[] ACKCheck = new byte[1];
-			ACKCheck[0] = (byte) packet.getSeqNum();
-			byte ACKChecklength[] = new byte[1];
+/*			try {
+				clientSocket = new DatagramSocket();
+			} catch (SocketException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}*/
+			byte[] ACKCheck = new byte[Segment.MAX_SEGMENT_SIZE];
+//			byte ACKChecklength[] = new byte[Segment.MAX_SEGMENT_SIZE];
 			DatagramPacket recievePacket = new DatagramPacket(ACKCheck,ACKCheck.length);
 			try {
-				System.out.println("Attempting to recieve packet " + packet.getSeqNum());
+//				System.out.println("Attempting to recieve packet "  + packet.getSeqNum());
 				clientSocket.receive(recievePacket);
-				System.out.println("Received packet " + packet.getSeqNum());
-				client.processAck(packet);
+				Segment recieveSeg = new Segment(recievePacket);
+				System.out.println("Received packet " + recieveSeg.getSeqNum());
+				
+				client.processAck(recieveSeg);
 				
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
