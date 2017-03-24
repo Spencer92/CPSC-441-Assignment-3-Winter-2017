@@ -345,7 +345,7 @@ public class FastClient {
 			server_port = Integer.parseInt(args[1]);
 			file_name = args[2];
 			window = Integer.parseInt(args[3]);
-		}
+		}//awserf
 		else {
 			System.out.println("wrong number of arguments, try again.");
 			System.out.println("usage: java FastClient server port file windowsize");
