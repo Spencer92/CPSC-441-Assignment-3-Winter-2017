@@ -96,7 +96,7 @@ public class FastClient {
 			segment = new Segment();
 			segmentCheck = true;
 			clientSocket = new DatagramSocket(7777);
-			AckHandler handler = new AckHandler(this,null,clientSocket);
+			AckHandler handler = new AckHandler(this, clientSocket);
 			Thread aThread = new Thread(handler);
 			aThread.start();
 			aTimer = new Timer();
