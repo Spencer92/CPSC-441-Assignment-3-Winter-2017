@@ -31,14 +31,14 @@ public class FastClient {
 	public static final int SERVER_PORT = 5555;
 	private DataOutputStream outputStream;
 	private DataInputStream inputStream;
-	private DataOutputStream outputStream2;
-	private DataInputStream inputStream2;
+//	private DataOutputStream outputStream2;
+//	private DataInputStream inputStream2;
 	private static final int MAX_BYTE_SIZE = 1000;
 	private static final int NO_DATA_RECEIVED = -1;
 	private String file_name;
 	private DatagramSocket clientSocket;
-	private DatagramPacket sendPacket;
-	private DatagramPacket receivePacket;
+//	private DatagramPacket sendPacket;
+//	private DatagramPacket receivePacket;
 	private InetAddress IPAddress;
 	private boolean isEnd = false;
 	private Timer aTimer;
@@ -74,15 +74,15 @@ public class FastClient {
 		byte checkForReceivedInfo = Byte.MIN_VALUE;
 		byte [] dataToSend = new byte[MAX_BYTE_SIZE];
 		Segment segment = null;
-		boolean segmentCheck;
+//		boolean segmentCheck;
 
 		queue = new TxQueue(this.window);
-		byte [] ACKCheck;
+//		byte [] ACKCheck;
 		int indexFileInfo;
 		int indexSender;
-		byte[][] dataPackets;
-		byte[] lastDataPacket;
-		int numPackets;
+//		byte[][] dataPackets;
+//		byte[] lastDataPacket;
+//		int numPackets;
 		int fileLength;
 		int seqNum = 0;
 
@@ -94,7 +94,7 @@ public class FastClient {
 			socket = new Socket(this.server_name,SERVER_PORT);
 			checkForReceivedInfo = 1;
 			segment = new Segment();
-			segmentCheck = true;
+//			segmentCheck = true;
 			clientSocket = new DatagramSocket(7777);
 			AckHandler handler = new AckHandler(this, clientSocket);
 			Thread aThread = new Thread(handler);
@@ -103,7 +103,7 @@ public class FastClient {
 			
 			
 			IPAddress = InetAddress.getByName("localhost");
-			ACKCheck = new byte[window];
+//			ACKCheck = new byte[window];
 
 			
 			outputStream = new DataOutputStream(socket.getOutputStream());
@@ -259,8 +259,10 @@ public class FastClient {
 //			handler = new AckHandler(this,segment, clientSocket);
 //			Thread aThread = new Thread(handler);
 			TimeOutHandler timeOut;
-			aTimer.schedule(timeOut = new TimeOutHandler(segment,this.timeout, clientSocket, IPAddress, SERVER_PORT, this,segment.getSeqNum()), (long) this.timeout);
-//			aThread.start();
+//aTimer.schedule(timeOut = new TimeOutHandler(segment,this.timeout, clientSocket, IPAddress, SERVER_PORT, this,segment.getSeqNum()), (long) this.timeout);
+			aTimer.schedule(timeOut = new TimeOutHandler(this,segment.getSeqNum()), (long) this.timeout);
+
+			//			aThread.start();
 			//			timeOut.processAck();
 //			timeOut.run();
 			//			processAck(segment,clientSocket);
@@ -346,8 +348,10 @@ public class FastClient {
 				this.clientSocket.send(sendPacket);
 				TimeOutHandler timeOut;
 //				handler = new AckHandler(this,queue.getSegment(seqNum), clientSocket);
-				aTimer.schedule(timeOut = new TimeOutHandler(queue.getSegment(seqNum),this.timeout, clientSocket, IPAddress, SERVER_PORT, this,seqNum), (long) this.timeout);
-//				handler.run();
+//				aTimer.schedule(timeOut = new TimeOutHandler(queue.getSegment(seqNum),this.timeout, clientSocket, IPAddress, SERVER_PORT, this,seqNum), (long) this.timeout);
+				aTimer.schedule(timeOut = new TimeOutHandler(this,seqNum), (long) this.timeout);
+
+				//				handler.run();
 				
 			} catch (SocketException e) {
 				// TODO Auto-generated catch block
