@@ -3,8 +3,6 @@ package client.client;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.SocketException;
 
 public class AckHandler implements Runnable
 {
@@ -15,6 +13,14 @@ public class AckHandler implements Runnable
 	FastClient client;
 	private DatagramSocket clientSocket;
 	
+	/**
+	 * This checks to see if any data has been sent from the server
+	 * 
+	 * 
+	 * @param client FastClint
+	 * @param clientSocket The socket that is used to talk to the server
+	 */
+	
 	public AckHandler(FastClient client, DatagramSocket clientSocket)
 	{
 		this.client = client;
@@ -22,7 +28,11 @@ public class AckHandler implements Runnable
 	
 	}
 	
-//asdfasdf
+	/**
+	 * Until the program ends, this checks to see if there is any
+	 * data that the server has sent
+	 * 
+	 */
 
 	@Override
 	public void run()
@@ -38,13 +48,14 @@ public class AckHandler implements Runnable
 				client.processAck(recieveSeg);
 				
 			} catch (IOException e) {
+				//clientSocket could try to still receive something
+				//after the client has ended
 				if(client.isEnd())
 				{
 					break;
 				}
 				else
 				{
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}

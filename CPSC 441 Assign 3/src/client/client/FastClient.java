@@ -60,6 +60,14 @@ public class FastClient {
 	}
 	
 	/* send file */
+	
+	/**
+	 * This reads the file, breaks it up into chunks, and
+	 * sends out the chunks for processesing, in order
+	 * for the chunks to be sent to the server
+	 * 
+	 * @param file_name
+	 */
 
 	public void send(String file_name) {
 		this.file_name = file_name;
@@ -83,6 +91,8 @@ public class FastClient {
 			checkForReceivedInfo = 1;
 			segment = new Segment();
 			clientSocket = new DatagramSocket(7777);
+
+			//Start the thread that will receive the acks
 			AckHandler handler = new AckHandler(this, clientSocket);
 			Thread aThread = new Thread(handler);
 			aThread.start();
@@ -111,6 +121,7 @@ public class FastClient {
 			indexSender = 0;
 			
 			
+			
 			while(indexFileInfo < fileByteInfo.length)
 			{
 				if(fileByteInfo.length - indexFileInfo < 1000)
@@ -118,6 +129,8 @@ public class FastClient {
 					break;
 				}
 				dataToSend = new byte[MAX_BYTE_SIZE];
+				
+				//Move the data into 1000 byte chunks for sending
 				while(indexSender < dataToSend.length && indexFileInfo < fileByteInfo.length && indexSender < MAX_BYTE_SIZE)
 				{
 					dataToSend[indexSender] = fileByteInfo[indexFileInfo];
@@ -125,36 +138,49 @@ public class FastClient {
 					indexFileInfo++;
 				}
 				indexSender = 0;
+				
+				//Create a segment with the data
 				segment = new Segment();
 				segment.setPayload(dataToSend);
 				segment.setSeqNum(seqNum);
 				seqNum++;
+				
+				//Wait for a spot to open on the queue
 				while(queue.isFull()){}
 				
 				processSend(segment);
 				
 			}
 			
-			dataToSend = new byte[fileByteInfo.length - indexFileInfo];
-			indexSender = 0;
-			while(indexSender < dataToSend.length && indexFileInfo < fileByteInfo.length && indexSender < MAX_BYTE_SIZE)
+			
+			//If the file isn't a multiple of 1000, there will be some
+			//data left that needs to be received
+			if(fileByteInfo.length - indexFileInfo != 0)
 			{
-				dataToSend[indexSender] = fileByteInfo[indexFileInfo];
-				indexSender++;
-				indexFileInfo++;
+				dataToSend = new byte[fileByteInfo.length - indexFileInfo];
+				indexSender = 0;
+				
+				//move the data into 1000 byte chunks for sending
+				while(indexSender < dataToSend.length && indexFileInfo < fileByteInfo.length && indexSender < MAX_BYTE_SIZE)
+				{
+					dataToSend[indexSender] = fileByteInfo[indexFileInfo];
+					indexSender++;
+					indexFileInfo++;
+				}
+				//create a segment with the data
+				segment = new Segment();
+				segment.setPayload(dataToSend);
+				segment.setSeqNum(seqNum);
+				
+				//wait for there to be a spot on the queue
+				while(queue.isFull()){}
+				
+				processSend(segment);
 			}
-			
-			segment = new Segment();
-			segment.setPayload(dataToSend);
-			segment.setSeqNum(seqNum);
-			while(queue.isFull()){}
-			
-			processSend(segment);
-			
 			
 			do
 			{
-			
+			//Don't end the program until the queue has been completely emptied
 				if(queue.isEmpty())
 				{	
 					isEnd = true;
@@ -183,16 +209,15 @@ public class FastClient {
 		
 	}
 	
-	/* Move processAck processSend, and processTime to FastClient
-	 * Pass FastClient to other functions
-	 * Use AckHandler to get receiveData
-	 * 
-	 * In AckHandler, use receiveData to wait for data for the specified amount of time,
-	 * and tell to resend if nothing found
-	 * 
-	 */
 	
-
+	/**
+	 * 
+	 * This prepares the data to be sent to the server,
+	 * it is then added to the queue in order to check when the server
+	 * gives an ack
+	 * 
+	 * @param segment The data to be processed
+	 */
 	
 	public synchronized void processSend(Segment segment)
 	{
@@ -212,11 +237,20 @@ public class FastClient {
 			e1.printStackTrace();
 		}
 		
-		// add segment to the queue, send segment,
-		// set the state of segment in the queue as "sent" and 
-		// schedule timertask for the segment
 	}
 
+	/**
+	 *	Once an Ack has been received, it needs to be processed
+	 *	in order to see if the Ack is a duplicate or not
+	 *
+	 *	If it is a duplicate, the Ack is ignored, 
+	 *	otherwise, it states that the ack has been received
+	 *	and is removed from the queue if possible at that time
+	 *
+	 *
+	 * @param Ack the segment that needs to be checked
+	 */
+	
 	
 	public synchronized void processAck(Segment Ack)
 	{		
@@ -238,18 +272,22 @@ public class FastClient {
 		
 		}
 	
-		// If ack belongs to the current sender window => set the 
-	// state of segment in the transmission queue as 
-	// "acknowledged". Also, until an unacknowledged
-	// segment is found at the head of the transmission 
-	// queue, keep removing segments from the queue
-	// Otherwise => ignore ack
 	}
+	
+	/**
+	 * 
+	 * When a certain amount of time has passed, this function
+	 * checks to see if the Ack was received, and resends the data
+	 * if it turns out it wasn't sent
+	 * 
+	 * @param seqNum The data in the queue that needs to be checked if
+	 * it was acked
+	 */
+	
 	
 	public synchronized void processTime(int seqNum)
 	{
 		DatagramPacket sendPacket;
-		AckHandler handler;
 			
 		
 		if(queue.getNode(seqNum) != null && queue.getNode(seqNum).getStatus() != TxQueueNode.ACKNOWLEDGED)
@@ -272,14 +310,6 @@ public class FastClient {
 			
 		}
 		
-		
-	// Keeping track of timer tasks for each segment may 
-	// be difficult. An easier way is to check whether the 
-	// time-out happened for a segment that belongs
-	// to the current window and not yet acknowledged.
-	// If yes => then resend the segment and schedule 
-	// timer task for the segment.
-	// Otherwise => ignore the time-out event.
 	}
 
     /**
