@@ -73,14 +73,12 @@ public class FastClient {
 		queue = new TxQueue(this.window);
 		int indexFileInfo;
 		int indexSender;
-		int fileLength;
 		int seqNum = 0;
 
 		
 		
 		try {
 			fileByteInfo = Files.readAllBytes(path);
-			fileLength = fileByteInfo.length;
 			socket = new Socket(this.server_name,SERVER_PORT);
 			checkForReceivedInfo = 1;
 			segment = new Segment();
@@ -127,7 +125,6 @@ public class FastClient {
 					indexFileInfo++;
 				}
 				indexSender = 0;
-//				System.out.println("About to process" + seqNum);
 				segment = new Segment();
 				segment.setPayload(dataToSend);
 				segment.setSeqNum(seqNum);
@@ -147,8 +144,6 @@ public class FastClient {
 				indexFileInfo++;
 			}
 			
-//			System.out.println("About to process" + seqNum);
-//			System.out.println("Entering final");
 			segment = new Segment();
 			segment.setPayload(dataToSend);
 			segment.setSeqNum(seqNum);
@@ -197,63 +192,18 @@ public class FastClient {
 	 * 
 	 */
 	
-/*	public synchronized void processAck(Segment Ack)
-	{
-		byte[] ACKCheck = new byte[1];
-		ACKCheck[0] = (byte) Ack.getSeqNum();
-		byte ACKChecklength[] = new byte[1];
-		boolean gotInfo = false;
-		DatagramPacket recievePacket = new DatagramPacket(ACKCheck,ACKCheck.length);
-		try {
-			clientSocket.receive(recievePacket);
-			gotInfo = true;
-			
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		if(gotInfo)
-		{
-			System.out.println("Got info");
-		}
-		else
-		{
-			System.out.println("Did not get info");
-		}
-		// If ack belongs to the current sender window => set the 
-	// state of segment in the transmission queue as 
-	// "acknowledged". Also, until an unacknowledged
-	// segment is found at the head of the transmission 
-	// queue, keep removing segments from the queue
-	// Otherwise => ignore ack
-	}*/
-	
+
 	
 	public synchronized void processSend(Segment segment)
 	{
-		int checkForReceivedInfo = NO_DATA_RECEIVED;
-//		DatagramSocket clientSocket = null;
-		DatagramPacket receivePacket = null;
-		byte[] ACKCheck = new byte[1];
-
-		AckHandler handler;
 
 		try {
 			DatagramPacket sendPacket = new DatagramPacket(segment.getBytes(), segment.getLength(),IPAddress, SERVER_PORT);
 			this.clientSocket.send(sendPacket);
 			queue.add(segment);
-			System.out.println("Sent out " + segment.getSeqNum());
-//			handler = new AckHandler(this,segment, clientSocket);
-//			Thread aThread = new Thread(handler);
 			TimeOutHandler timeOut;
-//aTimer.schedule(timeOut = new TimeOutHandler(segment,this.timeout, clientSocket, IPAddress, SERVER_PORT, this,segment.getSeqNum()), (long) this.timeout);
 			aTimer.schedule(timeOut = new TimeOutHandler(this,segment.getSeqNum()), (long) this.timeout);
 
-			//			aThread.start();
-			//			timeOut.processAck();
-//			timeOut.run();
-			//			processAck(segment,clientSocket);
-			
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
