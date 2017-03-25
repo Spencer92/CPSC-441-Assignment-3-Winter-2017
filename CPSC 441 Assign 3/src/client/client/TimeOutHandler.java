@@ -82,6 +82,12 @@ public class TimeOutHandler extends TimerTask
 
 		
 			System.out.println("Before trying to processTime " + seqNum);
+			try {
+				Thread.sleep(100); //Needed to ensure that a received ack is set before the time runs out
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 			client.processTime(seqNum);	
 
 		

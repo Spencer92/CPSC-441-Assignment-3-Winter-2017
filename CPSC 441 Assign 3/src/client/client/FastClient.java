@@ -389,7 +389,7 @@ public class FastClient {
 	
 	public static void main(String[] args) {
 		int window = 10; //segments
-		int timeout = 150; // milli-seconds (don't change this value)
+		int timeout = 100; // milli-seconds (don't change this value)
 		
 		String server = "localhost";
 		String file_name = "";
