@@ -31,18 +31,13 @@ public class FastClient {
 	public static final int SERVER_PORT = 5555;
 	private DataOutputStream outputStream;
 	private DataInputStream inputStream;
-//	private DataOutputStream outputStream2;
-//	private DataInputStream inputStream2;
 	private static final int MAX_BYTE_SIZE = 1000;
 	private static final int NO_DATA_RECEIVED = -1;
 	private String file_name;
 	private DatagramSocket clientSocket;
-//	private DatagramPacket sendPacket;
-//	private DatagramPacket receivePacket;
 	private InetAddress IPAddress;
 	private boolean isEnd = false;
 	private Timer aTimer;
-//	private boolean waitForSend = false;
 	
 	static TxQueue queue;
  	/**
@@ -54,35 +49,30 @@ public class FastClient {
         * @param window         window size
 	* @param timeout	time out value
         */
-	public FastClient(String server_name, int server_port, int window, int timeout, 
-			String file_name) {
+	public FastClient(String server_name, int server_port, int window, int timeout) {
 	
 	/* initialize */	
 		this.server_name = server_name;
 		this.server_port = server_port;
 		this.window = window;
 		this.timeout = timeout;
-		this.file_name = file_name;
+
 	}
 	
 	/* send file */
 
 	public void send(String file_name) {
+		this.file_name = file_name;
 		Path path = Paths.get(this.file_name);
 		byte [] fileByteInfo = null;
 		Socket socket = null;
 		byte checkForReceivedInfo = Byte.MIN_VALUE;
 		byte [] dataToSend = new byte[MAX_BYTE_SIZE];
 		Segment segment = null;
-//		boolean segmentCheck;
 
 		queue = new TxQueue(this.window);
-//		byte [] ACKCheck;
 		int indexFileInfo;
 		int indexSender;
-//		byte[][] dataPackets;
-//		byte[] lastDataPacket;
-//		int numPackets;
 		int fileLength;
 		int seqNum = 0;
 
@@ -94,7 +84,6 @@ public class FastClient {
 			socket = new Socket(this.server_name,SERVER_PORT);
 			checkForReceivedInfo = 1;
 			segment = new Segment();
-//			segmentCheck = true;
 			clientSocket = new DatagramSocket(7777);
 			AckHandler handler = new AckHandler(this, clientSocket);
 			Thread aThread = new Thread(handler);
@@ -103,7 +92,6 @@ public class FastClient {
 			
 			
 			IPAddress = InetAddress.getByName("localhost");
-//			ACKCheck = new byte[window];
 
 			
 			outputStream = new DataOutputStream(socket.getOutputStream());
@@ -124,7 +112,6 @@ public class FastClient {
 			indexFileInfo = 0;
 			indexSender = 0;
 			
-//			AckHandler handler = new AckHandler()
 			
 			while(indexFileInfo < fileByteInfo.length)
 			{
@@ -140,7 +127,7 @@ public class FastClient {
 					indexFileInfo++;
 				}
 				indexSender = 0;
-				System.out.println("About to process" + seqNum);
+//				System.out.println("About to process" + seqNum);
 				segment = new Segment();
 				segment.setPayload(dataToSend);
 				segment.setSeqNum(seqNum);
@@ -160,8 +147,8 @@ public class FastClient {
 				indexFileInfo++;
 			}
 			
-			System.out.println("About to process" + seqNum);
-			System.out.println("Entering final");
+//			System.out.println("About to process" + seqNum);
+//			System.out.println("Entering final");
 			segment = new Segment();
 			segment.setPayload(dataToSend);
 			segment.setSeqNum(seqNum);
@@ -413,7 +400,7 @@ public class FastClient {
 			System.exit(0);
 		}
 		
-		FastClient fc = new FastClient(server, server_port, window, timeout, file_name);
+		FastClient fc = new FastClient(server, server_port, window, timeout);
 		
 		System.out.printf("sending file \'%s\' to server...\n", file_name);
 		fc.send(file_name);
