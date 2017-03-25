@@ -219,32 +219,19 @@ public class FastClient {
 
 	
 	public synchronized void processAck(Segment Ack)
-	{
-/*		try
-		{
-			queue.getNode(Ack.getSeqNum()).setStatus(TxQueueNode.ACKNOWLEDGED);
-		}
-		catch(NullPointerException e)
-		{
-			System.out.println(Ack.getSeqNum() + " already removed");
-			//do nothing
-		}*/
-		
-		
-		
+	{		
 		
 		if(queue.getNode(Ack.getSeqNum()) != null)
 		{
 		
 			queue.getNode(Ack.getSeqNum()).setStatus(TxQueueNode.ACKNOWLEDGED);
-			System.out.println("Head of queue is " + queue.getHeadSegment().getSeqNum());
-			System.out.println("Acknowledged Ack " + Ack.getSeqNum());
-//			waitForSend = false;
+//			System.out.println("Head of queue is " + queue.getHeadSegment().getSeqNum());
+//			System.out.println("Acknowledged Ack " + Ack.getSeqNum());
 			
 			while(queue.getHeadNode() != null && queue.getHeadNode().getStatus() == TxQueueNode.ACKNOWLEDGED)
 			{
 				try {
-					System.out.println("Removed Ack " + queue.getHeadSegment().getSeqNum());
+//					System.out.println("Removed Ack " + queue.getHeadSegment().getSeqNum());
 					queue.remove();
 					
 				} catch (InterruptedException e) {
@@ -254,11 +241,10 @@ public class FastClient {
 			}
 		
 		}
-		else
+/*		else
 		{
-//			waitForSend = false;
 			System.out.println("Did not remove " + Ack.getSeqNum());
-		}
+		}*/
 	
 		// If ack belongs to the current sender window => set the 
 	// state of segment in the transmission queue as 
