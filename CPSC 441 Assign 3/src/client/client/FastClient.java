@@ -224,14 +224,10 @@ public class FastClient {
 		if(queue.getNode(Ack.getSeqNum()) != null)
 		{
 		
-			queue.getNode(Ack.getSeqNum()).setStatus(TxQueueNode.ACKNOWLEDGED);
-//			System.out.println("Head of queue is " + queue.getHeadSegment().getSeqNum());
-//			System.out.println("Acknowledged Ack " + Ack.getSeqNum());
-			
+			queue.getNode(Ack.getSeqNum()).setStatus(TxQueueNode.ACKNOWLEDGED);			
 			while(queue.getHeadNode() != null && queue.getHeadNode().getStatus() == TxQueueNode.ACKNOWLEDGED)
 			{
 				try {
-//					System.out.println("Removed Ack " + queue.getHeadSegment().getSeqNum());
 					queue.remove();
 					
 				} catch (InterruptedException e) {
@@ -241,10 +237,6 @@ public class FastClient {
 			}
 		
 		}
-/*		else
-		{
-			System.out.println("Did not remove " + Ack.getSeqNum());
-		}*/
 	
 		// If ack belongs to the current sender window => set the 
 	// state of segment in the transmission queue as 
@@ -256,25 +248,20 @@ public class FastClient {
 	
 	public synchronized void processTime(int seqNum)
 	{
-//		DatagramSocket clientSocket;
 		DatagramPacket sendPacket;
 		AckHandler handler;
-		
-//		System.out.println("Wait for send is" + waitForSend);		
+			
 		
 		if(queue.getNode(seqNum) != null && queue.getNode(seqNum).getStatus() != TxQueueNode.ACKNOWLEDGED)
 		{
-			System.out.println("Failed to send seqNum " + seqNum + ", resending");
+//			System.out.println("Failed to send seqNum " + seqNum + ", resending");
 			sendPacket = new DatagramPacket(queue.getSegment(seqNum).getBytes(),queue.getSegment(seqNum).getLength(),this.IPAddress,SERVER_PORT);
 			try {
 
 				this.clientSocket.send(sendPacket);
 				TimeOutHandler timeOut;
-//				handler = new AckHandler(this,queue.getSegment(seqNum), clientSocket);
-//				aTimer.schedule(timeOut = new TimeOutHandler(queue.getSegment(seqNum),this.timeout, clientSocket, IPAddress, SERVER_PORT, this,seqNum), (long) this.timeout);
 				aTimer.schedule(timeOut = new TimeOutHandler(this,seqNum), (long) this.timeout);
 
-				//				handler.run();
 				
 			} catch (SocketException e) {
 				// TODO Auto-generated catch block
@@ -284,13 +271,11 @@ public class FastClient {
 				e.printStackTrace();
 			}
 			
-			
-//			processSend(queue.getSegment(seqNum));
 		}
-		else
+/*		else
 		{
 			System.out.println("Did not fail to send seqNum " + seqNum);
-		}
+		}*/
 		
 		
 	// Keeping track of timer tasks for each segment may 
