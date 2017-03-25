@@ -1,0 +1,1 @@
+Currently, the timeout at 100 milliseconds sometimes causes a fail and resend, even when the drop rate is 0. This doesn't actually seem to cause the files at the other end to change, but at 200 milliseconds and up the failure rate seems to go away for that problem.

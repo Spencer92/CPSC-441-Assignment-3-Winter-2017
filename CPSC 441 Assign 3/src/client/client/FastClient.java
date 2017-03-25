@@ -196,7 +196,7 @@ public class FastClient {
 					aTimer.cancel();
 					clientSocket.close();
 					break;
-				}
+				}//if queue.isEmpty()
 			}while(true);
 			
 			
@@ -223,6 +223,7 @@ public class FastClient {
 	{
 
 		try {
+			
 			DatagramPacket sendPacket = new DatagramPacket(segment.getBytes(), segment.getLength(),IPAddress, SERVER_PORT);
 			this.clientSocket.send(sendPacket);
 			queue.add(segment);
@@ -257,7 +258,7 @@ public class FastClient {
 		
 		if(queue.getNode(Ack.getSeqNum()) != null)
 		{
-		
+			//If the node is in the queue, state that it has been acknowledged
 			queue.getNode(Ack.getSeqNum()).setStatus(TxQueueNode.ACKNOWLEDGED);			
 			while(queue.getHeadNode() != null && queue.getHeadNode().getStatus() == TxQueueNode.ACKNOWLEDGED)
 			{
@@ -292,6 +293,7 @@ public class FastClient {
 		
 		if(queue.getNode(seqNum) != null && queue.getNode(seqNum).getStatus() != TxQueueNode.ACKNOWLEDGED)
 		{
+			//If the packet failed to send, resend packet
 			sendPacket = new DatagramPacket(queue.getSegment(seqNum).getBytes(),queue.getSegment(seqNum).getLength(),this.IPAddress,SERVER_PORT);
 			try {
 
