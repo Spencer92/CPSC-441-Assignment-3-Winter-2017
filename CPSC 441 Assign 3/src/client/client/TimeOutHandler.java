@@ -50,9 +50,6 @@ public class TimeOutHandler extends TimerTask
 	@Override
 	public void run() 
 	{
-
-		
-			System.out.println("Before trying to processTime " + seqNum);
 			try {
 				Thread.sleep(100); //Needed to ensure that a received ack is set before the time runs out
 			} catch (InterruptedException e) {
@@ -61,12 +58,6 @@ public class TimeOutHandler extends TimerTask
 			}
 			client.processTime(seqNum);	
 
-		
-		//recieve ack
-		//check if correct ack
-		//if it is, remove head
-		//if not, remove head and add to end of queue
-		//maybe
 		
 		
 	}

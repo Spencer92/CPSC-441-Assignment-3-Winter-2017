@@ -254,7 +254,6 @@ public class FastClient {
 		
 		if(queue.getNode(seqNum) != null && queue.getNode(seqNum).getStatus() != TxQueueNode.ACKNOWLEDGED)
 		{
-//			System.out.println("Failed to send seqNum " + seqNum + ", resending");
 			sendPacket = new DatagramPacket(queue.getSegment(seqNum).getBytes(),queue.getSegment(seqNum).getLength(),this.IPAddress,SERVER_PORT);
 			try {
 
@@ -272,10 +271,6 @@ public class FastClient {
 			}
 			
 		}
-/*		else
-		{
-			System.out.println("Did not fail to send seqNum " + seqNum);
-		}*/
 		
 		
 	// Keeping track of timer tasks for each segment may 
